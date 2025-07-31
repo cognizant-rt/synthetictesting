@@ -1,11 +1,14 @@
 package com.cognizant.vibe.synthetictesting.app;
 
-import com.cognizant.vibe.synthetictesting.check.entity.CheckCommand;
 import com.cognizant.vibe.synthetictesting.check.CheckCommandRepository;
+import com.cognizant.vibe.synthetictesting.check.CheckSchedulerService;
+import com.cognizant.vibe.synthetictesting.check.entity.CheckCommand;
 import com.cognizant.vibe.synthetictesting.check.entity.CreateCheckCommandRequest;
 import com.cognizant.vibe.synthetictesting.app.entity.AppTarget;
 import com.cognizant.vibe.synthetictesting.app.entity.CreateAppTargetRequest;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,12 +17,18 @@ import java.util.List;
 @Service
 public class AppTargetService {
 
+    private static final Logger log = LoggerFactory.getLogger(AppTargetService.class);
+
     private final AppTargetRepository appTargetRepository;
     private final CheckCommandRepository checkCommandRepository;
+    private final CheckSchedulerService checkSchedulerService;
 
-    public AppTargetService(AppTargetRepository appTargetRepository, CheckCommandRepository checkCommandRepository) {
+    public AppTargetService(AppTargetRepository appTargetRepository,
+                            CheckCommandRepository checkCommandRepository,
+                            CheckSchedulerService checkSchedulerService) {
         this.appTargetRepository = appTargetRepository;
         this.checkCommandRepository = checkCommandRepository;
+        this.checkSchedulerService = checkSchedulerService;
     }
 
     @Transactional
@@ -54,7 +63,17 @@ public class AppTargetService {
                 .build();
 
         // 3. Save the new command to the database.
-        return checkCommandRepository.save(newCommand);
+        CheckCommand savedCommand = checkCommandRepository.save(newCommand);
+
+        // 4. If the parent target is enabled, schedule the new command immediately.
+        if (target.isEnabled()) {
+            checkSchedulerService.scheduleSingleCommand(savedCommand);
+        } else {
+            log.warn("Check command ID {} was created for a disabled target '{}'. It will not be scheduled.",
+                    savedCommand.getId(), target.getName());
+        }
+
+        return savedCommand;
     }
 
     /**

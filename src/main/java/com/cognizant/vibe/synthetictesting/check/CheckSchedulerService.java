@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Manages the scheduling of all synthetic checks at application startup.
+ * Manages the scheduling of all synthetic checks.
  */
 @Service
 @RequiredArgsConstructor
@@ -42,6 +42,7 @@ public class CheckSchedulerService {
 
         int scheduledCount = 0;
         for (AppTarget target : enabledTargets) {
+            // Use the new method to fetch commands with their parent AppTarget to avoid LazyInitializationException
             List<CheckCommand> commands = checkCommandRepository.findByAppIdWithAppTarget(target.getId());
             if (commands.isEmpty()) {
                 log.warn("Target '{}' is enabled but has no check commands.", target.getName());
@@ -56,7 +57,13 @@ public class CheckSchedulerService {
         log.info("Successfully scheduled {} checks.", scheduledCount);
     }
 
-    private void scheduleSingleCommand(CheckCommand command) {
+    /**
+     * Schedules a single check command to run at its configured interval.
+     * This can be called at startup or when a new command is created at runtime.
+     *
+     * @param command The CheckCommand to schedule. The associated AppTarget should be fully initialized.
+     */
+    public void scheduleSingleCommand(CheckCommand command) {
         // Create a runnable task that will call the executor service.
         Runnable task = () -> checkExecutorService.execute(command);
 
@@ -66,7 +73,7 @@ public class CheckSchedulerService {
             return;
         }
 
-        // Schedule the task to run at a fixed rate.
+        // Schedule the task to run at a fixed rate with an initial delay of 5 seconds.
         checkSchedulerExecutor.scheduleAtFixedRate(task, 5, interval, TimeUnit.SECONDS);
 
         log.info("Scheduled check ID: {} for target '{}' to run every {} seconds.",

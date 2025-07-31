@@ -10,9 +10,9 @@ This project is a backend service for proactive application monitoring. It provi
 * Historical Analysis: The stored data allows you to query and analyze the historical health and performance trends of your applications.
 
 #### Technologies Used:
-* Java 17
+* Java 21
 * Spring Boot 3
-* H2
+* H2 (File-based)
 
 ## How to use
 1. Start application `mvn spring-boot:run`
@@ -36,14 +36,13 @@ curl --location 'localhost:8080/api/v1/targets/1/checks' \
     "intervalSeconds": 5
 }'
 ```
-4. Restart application
 
 ### Persistence
 The application uses embedded H2. Go to `http://localhost:8080/h2-console` for the UI client.
 
 ## Tasks
-- [ ] Implement check commands
-- [ ] Update scheduler at runtime when a new command is added
+- [X] Implement check commands
+- [X] Update scheduler at runtime when a new command is added
 - [ ] Add edit/remove check endpoint
 - [ ] Expose check results as metrics
 - [ ] Add Grafana
