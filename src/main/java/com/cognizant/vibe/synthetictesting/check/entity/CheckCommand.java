@@ -1,8 +1,12 @@
 package com.cognizant.vibe.synthetictesting.check.entity;
 
 import com.cognizant.vibe.synthetictesting.app.entity.AppTarget;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -25,4 +29,12 @@ public class CheckCommand {
     private String parameters; // optional headers, port
 
     private long intervalSeconds;
+
+    /**
+     * A list of all results for this command. When a command is deleted, all its results are deleted as well.
+     */
+    @OneToMany(mappedBy = "command", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore // Prevents serialization of potentially huge lists of results when fetching a command.
+    private List<CheckResult> results = new ArrayList<>();
+
 }

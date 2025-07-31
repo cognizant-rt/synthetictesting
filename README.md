@@ -43,6 +43,6 @@ The application uses embedded H2. Go to `http://localhost:8080/h2-console` for t
 ## Tasks
 - [X] Implement check commands
 - [X] Update scheduler at runtime when a new command is added
-- [ ] Add edit/remove check endpoint
-- [ ] Expose check results as metrics
+- [X] Add edit/remove check endpoint
+- [X] Expose check results as metrics
 - [ ] Add Grafana

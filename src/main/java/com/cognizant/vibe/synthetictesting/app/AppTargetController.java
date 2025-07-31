@@ -1,5 +1,6 @@
 package com.cognizant.vibe.synthetictesting.app;
 
+import com.cognizant.vibe.synthetictesting.check.dto.CheckCommandResultsDto;
 import com.cognizant.vibe.synthetictesting.check.entity.CheckCommand;
 import com.cognizant.vibe.synthetictesting.check.entity.CreateCheckCommandRequest;
 import com.cognizant.vibe.synthetictesting.app.entity.AppTarget;
@@ -55,5 +56,23 @@ public class AppTargetController {
                 .toUri();
 
         return ResponseEntity.created(location).body(createdCommand);
+    }
+
+    @GetMapping("/{targetId}/checks")
+    public ResponseEntity<List<CheckCommand>> getCheckCommandsForTarget(@PathVariable Long targetId) {
+        List<CheckCommand> commands = appTargetService.getCheckCommandsForTarget(targetId);
+        return ResponseEntity.ok(commands);
+    }
+
+    @DeleteMapping("/{targetId}/checks/{checkId}")
+    public ResponseEntity<Void> deleteCheckCommand(@PathVariable Long targetId, @PathVariable Long checkId) {
+        appTargetService.deleteCheckCommand(targetId, checkId);
+        return ResponseEntity.noContent().build(); // HTTP 204 No Content is standard for successful DELETE
+    }
+
+    @GetMapping("/{targetId}/results")
+    public ResponseEntity<List<CheckCommandResultsDto>> getCheckResultsForTarget(@PathVariable Long targetId) {
+        List<CheckCommandResultsDto> results = appTargetService.getCheckResultsForTarget(targetId);
+        return ResponseEntity.ok(results);
     }
 }

@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,6 +30,9 @@ public class CheckSchedulerService {
     private final CheckCommandRepository checkCommandRepository;
     private final CheckExecutorService checkExecutorService;
     private final ScheduledExecutorService checkSchedulerExecutor;
+
+    // A map to hold references to scheduled tasks, allowing them to be cancelled later.
+    private final Map<Long, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
 
     /**
      * This method is executed by Spring after the application context is loaded.
@@ -64,6 +70,10 @@ public class CheckSchedulerService {
      * @param command The CheckCommand to schedule. The associated AppTarget should be fully initialized.
      */
     public void scheduleSingleCommand(CheckCommand command) {
+        if (scheduledTasks.containsKey(command.getId())) {
+            log.warn("Check command ID {} is already scheduled. Skipping.", command.getId());
+            return;
+        }
         // Create a runnable task that will call the executor service.
         Runnable task = () -> checkExecutorService.execute(command);
 
@@ -74,9 +84,27 @@ public class CheckSchedulerService {
         }
 
         // Schedule the task to run at a fixed rate with an initial delay of 5 seconds.
-        checkSchedulerExecutor.scheduleAtFixedRate(task, 5, interval, TimeUnit.SECONDS);
+        ScheduledFuture<?> future = checkSchedulerExecutor.scheduleAtFixedRate(task, 5, interval, TimeUnit.SECONDS);
+        scheduledTasks.put(command.getId(), future);
 
         log.info("Scheduled check ID: {} for target '{}' to run every {} seconds.",
                 command.getId(), command.getApp().getName(), interval);
+    }
+
+    /**
+     * Unschedules and removes a running check command.
+     *
+     * @param checkId The ID of the command to unschedule.
+     */
+    public void unscheduleSingleCommand(Long checkId) {
+        ScheduledFuture<?> future = scheduledTasks.get(checkId);
+        if (future != null) {
+            // Cancel the task. The 'false' argument means do not interrupt the task if it's currently running.
+            future.cancel(false);
+            scheduledTasks.remove(checkId);
+            log.info("Unscheduled check command ID: {}", checkId);
+        } else {
+            log.warn("Could not unschedule check command ID: {}. It was not found in the scheduler.", checkId);
+        }
     }
 }
